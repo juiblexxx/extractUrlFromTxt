@@ -138,8 +138,8 @@ while True:
                     # break   # ループ終了
 
             # 出力ファイルのdiffとる
-            if filecmp.cmp(output_file, output_old_file, shallow=False) == True:
-                send_to_line_notify(line_url, line_token, "差分なし")
+            if filecmp.cmp(output_file, output_old_file, shallow=False) == False:
+                send_to_line_notify(line_url, line_token, "差分あり")
 
         # messagebox.showinfo("完了", "出力しました。")
         break
