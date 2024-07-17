@@ -11,7 +11,7 @@ import filecmp
 import configparser
 import requests
 
-import PySimpleGUI as sg
+# import PySimpleGUI as sg
 
 # ライブラリをインポート
 from tkinter import messagebox
