@@ -15,6 +15,8 @@ from tkinter import messagebox
 # 規定値の定義
 config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
 
+
+
 def send_to_line_notify(url:str, token: str, notify_message: str):
     # def send_image_to_line_notify(url: str, token: str, notify_message: str, image_path: str):
     # 指定したメッセージと画像を貼ってくれるLine通知用の関数
@@ -27,6 +29,8 @@ def send_to_line_notify(url:str, token: str, notify_message: str):
     response = requests.post(url, headers=headers, params=payload)
     return response.status_code
 
+
+
 def extract_url(input_path, charset) -> str:
     # input_pathからURL文字列のみを返す
     # ファイルを開く
@@ -35,6 +39,8 @@ def extract_url(input_path, charset) -> str:
 
     regex = r"https?://[\w/:%#\$&\?\(\)~\.=\+-]+"   # URL用の正規表現
     return re.findall(regex, text)
+
+
 
 def main_gui(target_path, target_string):
     # チェックボックスグループの定義
@@ -65,6 +71,8 @@ def main_gui(target_path, target_string):
             main(values["paths"], values["references"])
             messagebox.showinfo("完了", "処理完了しました。")
             break   # UIループ終了
+
+
 
 def main(target_path, target_string):
     # メイン処理
@@ -129,6 +137,8 @@ target_string = config_ini["SETTINGS"]["target_string"]
 line_enable = config_ini["LINE"]["enable"]
 line_url = config_ini["LINE"]["url"]
 line_token = config_ini["LINE"]["token"]
+
+
 
 if __name__ == "__main__":
     if gui == "1":
