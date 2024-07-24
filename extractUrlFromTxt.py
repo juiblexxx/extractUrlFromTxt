@@ -52,7 +52,7 @@ def main_gui(target_path, target_string):
     layout = [
         [sg.Text("チェックしたいファイルを指定してください。\n同じフォルダで同じ拡張子をもつファイルをチェック対象とします。\nカンマ区切りで複数指定可")],
         [sg.InputText(key="paths",default_text=target_path), sg.FileBrowse()],
-        [sg.Radio("UTF8", key=CHECKBOX_UTF8, group_id=CHECKBOX_GID01, default=True), sg.Radio("CP932", key=CHECKBOX_CP932, group_id=CHECKBOX_GID01)],
+        [sg.Radio("UTF-8", key=CHECKBOX_UTF8, group_id=CHECKBOX_GID01, default=True), sg.Radio("CP932", key=CHECKBOX_CP932, group_id=CHECKBOX_GID01)],
         [sg.Text("探したい文字列（URLの一部）があれば指定してください\nカンマ区切りで複数指定可")],
         [sg.InputText(key="references", default_text=target_string)],
         [sg.Button("実行")]
@@ -68,13 +68,18 @@ def main_gui(target_path, target_string):
             break   # UIループ終了
 
         elif event == "実行":   # 実行ボタンが押されたら
-            main(values["paths"], values["references"])
+            if values[CHECKBOX_UTF8]:
+                target_charset = "utf-8"
+            elif values[CHECKBOX_CP932]:
+                target_charset = "cp932"
+
+            main(values["paths"], values["references"], target_charset)
             messagebox.showinfo("完了", "処理完了しました。")
             break   # UIループ終了
 
 
 
-def main(target_path, target_string):
+def main(target_path, target_string, target_charset):
     # メイン処理
     # 古い前回結果ファイルを削除
     if os.path.exists(output_old_file):
@@ -85,7 +90,7 @@ def main(target_path, target_string):
         os.rename(output_file, output_old_file)
 
     # チェック対象ファイルの文字コードセット
-    charset = "utf-8"
+    charset = target_charset
 
     # チェック処理開始
     for file_path in target_path.split(","):
@@ -133,7 +138,7 @@ def main(target_path, target_string):
 
 # コンフィグの取得
 config_ini = configparser.ConfigParser()
-config_ini.read(config_path, encoding='utf-8')
+config_ini.read(config_path, encoding="utf-8")
 
 # コンフィグ値を変数に代入しておく
 gui = config_ini["SETTINGS"]["gui"]
@@ -141,6 +146,7 @@ output_file = config_ini["SETTINGS"]["output_new"]
 output_old_file = config_ini["SETTINGS"]["output_old"]
 target_path = config_ini["SETTINGS"]["target_path"]
 target_string = config_ini["SETTINGS"]["target_string"]
+target_charset = config_ini["SETTINGS"]["target_charset"]
 line_enable = config_ini["LINE"]["enable"]
 line_url = config_ini["LINE"]["url"]
 line_token = config_ini["LINE"]["token"]
@@ -151,5 +157,5 @@ if __name__ == "__main__":
     if gui == "1":
         main_gui(target_path, target_string)
     else:
-        main(target_path, target_string)
+        main(target_path, target_string, target_charset)
 
