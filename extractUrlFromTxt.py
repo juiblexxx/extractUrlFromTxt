@@ -102,6 +102,9 @@ def main(target_path, target_string):
                 for file_name in os.listdir(parent_path)
                 if os.path.isfile(os.path.join(parent_path, file_name)) and file_name.endswith(base_extention)
                 ]
+            # files は parent_path + file_name
+            # file_name は parent_path の listdir
+            # 但し、parent_path + parent_name がファイル かつ 拡張子が base_extention なら
 
             with open(output_file, "a", encoding = charset) as w:
                 # 見つかったファイルからURL文字列を取得する
@@ -120,7 +123,11 @@ def main(target_path, target_string):
 
     # 出力ファイルのdiffとる
     if filecmp.cmp(output_file, output_old_file, shallow = False) == False and line_enable == "1":
-        send_to_line_notify(line_url, line_token, "差分あり")
+        with open(output_file, "r", encoding = charset) as f:
+            # リストから最後の要素を取得
+            last_line = f.readlines()[-1].rstrip("\n")
+        # print (f"{last_line}")
+        send_to_line_notify(line_url, line_token, f"差分あり：{last_line}")
 
 
 
