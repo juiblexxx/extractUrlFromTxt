@@ -17,7 +17,7 @@ config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
 
 
 
-def send_to_line_notify(url:str, token: str, notify_message: str):
+def send_to_line_notify(url:str, token: str, notify_message: str) -> int:
     # def send_image_to_line_notify(url: str, token: str, notify_message: str, image_path: str):
     # 指定したメッセージと画像を貼ってくれるLine通知用の関数
     headers = {"Authorization" : "Bearer "+ token}
@@ -31,16 +31,26 @@ def send_to_line_notify(url:str, token: str, notify_message: str):
 
 
 
-def extract_url(input_path, charset) -> str:
-    # input_pathからURL文字列のみを返す
-    # ファイルを開く
+def extract_url(input_path, charset) -> list:
+    # ファイルを開いてURLだけをリスト化して返す
     with open(input_path, "r", encoding = charset) as f:
-        text = f.read()
-
+        text = f.read() # ファイルの中身全部読む
     regex = r"https?://[\w/:%#\$&\?\(\)~\.=\+-]+"   # URL用の正規表現
-    return re.findall(regex, text)
+    return re.findall(regex, text) # リストで戻す
 
 
+
+def matches_any_pattern(text: str, patterns: str) -> bool:
+    """
+    テキストが複数の正規表現パターンのいずれかにマッチするかをチェックする関数。
+    :param text: 検索対象の文字列
+    :param patterns: 正規表現パターンのリスト
+    :return: マッチした場合は True、そうでない場合は False
+    """
+    for pattern in patterns:
+        if re.search(pattern, text):
+            return True
+    return False
 
 def main_gui(target_path, target_string):
     # チェックボックスグループの定義
@@ -93,45 +103,49 @@ def main(target_path, target_string, target_charset):
     charset = target_charset
 
     # チェック処理開始
-    for file_path in target_path.split(","):
-        if os.path.isfile(file_path):
-            # 基準拡張子とカレントパスを取得
-            base_extention = os.path.splitext(file_path)[1]
-            parent_path = os.path.dirname(file_path)
+    for file_path in target_path.split(","):    # カンマで区切って複数パスを全部処理する
+        if os.path.isfile(file_path) == False:  # ファイルじゃなければ次の指定パスへ
+            continue
 
-            # ディレクトリを取得してしまわないようisfileでファイルのみ取得
-            # かつ、base_extentionと同一拡張子のみ
-            # endswithでチェックするので大文字・小文字の区別あり
-            files = [
-                os.path.join(parent_path, file_name)
-                for file_name in os.listdir(parent_path)
-                if os.path.isfile(os.path.join(parent_path, file_name)) and file_name.endswith(base_extention)
-                ]
-            # files は parent_path + file_name
-            # file_name は parent_path の listdir
-            # 但し、parent_path + parent_name がファイル かつ 拡張子が base_extention なら
+        # 基準拡張子とカレントパスを取得
+        base_extention = os.path.splitext(file_path)[1]
+        parent_path = os.path.dirname(file_path)
 
-            with open(output_file, "a", encoding = charset) as w:
-                # 見つかったファイルからURL文字列を取得する
-                # URLの絞り込み指定があったなら、絞り込んだURLのみファイルに出力する
-                for file in files:
-                    urls = extract_url(file, charset)
-                    for url in urls:
-                        if target_string != "":
-                            # 対象文字列指定があった場合は、存在した文字列のみ出力する
-                            for regex in target_string.split(","):
-                                reference_url = re.findall(regex, url)
-                                for ret in reference_url:   # ここでマッチした箇所は無視、元URLを出力したい
-                                    w.write(f"{url}\n")
-                        else:
-                            w.write(f"{url}\n")
+        # ディレクトリを取得してしまわないようisfileでファイルのみ取得
+        # かつ、base_extentionと同一拡張子のみ
+        files = [
+            os.path.join(parent_path, file_name)
+            for file_name in os.listdir(parent_path)
+            if os.path.isfile(os.path.join(parent_path, file_name)) and file_name.lower().endswith(base_extention.lower())
+            ]
+        # files は parent_path + file_name
+        # file_name は parent_path の listdir
+        # 但し、parent_path + parent_name がファイル かつ 拡張子が base_extention なら
+        # endswithでチェックするので大文字・小文字の区別あり（よって小文字にして比較する）
+
+        # 見つかったファイルからURL文字列を取得しファイルに出力
+        # URLの絞り込み指定target_stringがあったなら、絞り込んだURLのみファイルに出力する
+        with open(output_file, "a", encoding = charset) as w:
+            for file in files:  # 入力パスから取得したファイル群を1づつ処理していく
+                urls = extract_url(file, charset)   # ファイル内のURLをリストで取得
+                url_prev = "" # 連続して同じURLは出力しないチェック用
+                for url in urls:
+                    # URLの絞り込みがあれば、マッチするかチェック
+                    if target_string != "" and matches_any_pattern(url, target_string.split(",")) == False:
+                        continue
+
+                    # ファイル出力の前に前回と同じURLは出力しないチェック
+                    if url_prev == url:
+                        continue
+
+                    w.write(f"{url}\n")
+                    url_prev = url
 
     # 出力ファイルのdiffとる
     if filecmp.cmp(output_file, output_old_file, shallow = False) == False and line_enable == "1":
         with open(output_file, "r", encoding = charset) as f:
             # リストから最後の要素を取得
             last_line = f.readlines()[-1].rstrip("\n")
-        # print (f"{last_line}")
         send_to_line_notify(line_url, line_token, f"差分あり：{last_line}")
 
 
@@ -141,15 +155,15 @@ config_ini = configparser.ConfigParser()
 config_ini.read(config_path, encoding="utf-8")
 
 # コンフィグ値を変数に代入しておく
-gui = config_ini["SETTINGS"]["gui"]
-output_file = config_ini["SETTINGS"]["output_new"]
-output_old_file = config_ini["SETTINGS"]["output_old"]
-target_path = config_ini["SETTINGS"]["target_path"]
-target_string = config_ini["SETTINGS"]["target_string"]
-target_charset = config_ini["SETTINGS"]["target_charset"]
-line_enable = config_ini["LINE"]["enable"]
-line_url = config_ini["LINE"]["url"]
-line_token = config_ini["LINE"]["token"]
+gui = config_ini["SETTINGS"].get("gui", "1")
+output_file = config_ini["SETTINGS"].get("output_new", "_url.txt")
+output_old_file = config_ini["SETTINGS"].get("output_old", "_url_old.txt")
+target_path = config_ini["SETTINGS"].get("target_path", "./")
+target_string = config_ini["SETTINGS"].get("target_string", "")
+target_charset = config_ini["SETTINGS"].get("target_charset", "utf8")
+line_enable = config_ini["LINE"].get("enable", "0")
+line_url = config_ini["LINE"].get("url", "")
+line_token = config_ini["LINE"].get("token", "")
 
 
 
