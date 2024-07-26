@@ -126,20 +126,22 @@ def main(target_path, target_string, target_charset):
         # 見つかったファイルからURL文字列を取得しファイルに出力
         # URLの絞り込み指定target_stringがあったなら、絞り込んだURLのみファイルに出力する
         with open(output_file, "a", encoding = charset) as w:
+            url_prev = "" # 連続して同じURLは出力しないチェック用
             for file in files:  # 入力パスから取得したファイル群を1づつ処理していく
                 urls = extract_url(file, charset)   # ファイル内のURLをリストで取得
-                url_prev = "" # 連続して同じURLは出力しないチェック用
                 for url in urls:
+                    # 前と同じURLはそもそもチェックしない
+                    if url_prev == url:
+                        continue
+                    url_prev = url
+
                     # URLの絞り込みがあれば、マッチするかチェック
+                    # マッチなければ出力せず次へ
                     if target_string != "" and matches_any_pattern(url, target_string.split(",")) == False:
                         continue
 
-                    # ファイル出力の前に前回と同じURLは出力しないチェック
-                    if url_prev == url:
-                        continue
-
                     w.write(f"{url}\n")
-                    url_prev = url
+                    url_prev = url  # 間をおいて同じURLがある可能性があるので、ここでも入れなおす
 
     # 出力ファイルのdiffとる
     if filecmp.cmp(output_file, output_old_file, shallow = False) == False and line_enable == "1":
